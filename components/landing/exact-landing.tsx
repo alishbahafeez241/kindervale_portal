@@ -31,6 +31,33 @@ export function ExactLanding() {
       if (typeof win.showSite === "function") {
         win.showSite();
       }
+
+      // Override the mock showLogin to navigate to the real login page
+      win.showLogin = () => {
+        window.location.assign("/login");
+      };
+
+      // Strip away any mock event listeners bound by the injected script and attach our own
+      const attachLandingListeners = () => {
+        const buttons = document.querySelectorAll("button, a");
+        buttons.forEach((btn) => {
+          const text = btn.textContent?.toLowerCase() || "";
+          if (text.includes("login") || text.includes("portal") || btn.id === "loginBtn" || btn.id === "portalBtn") {
+            if ((btn as any)._hasPortalListener) return;
+            const newBtn = btn.cloneNode(true) as HTMLElement;
+            btn.parentNode?.replaceChild(newBtn, btn);
+            (newBtn as any)._hasPortalListener = true;
+            newBtn.addEventListener("click", (e) => {
+              e.preventDefault();
+              window.location.assign("/login");
+            });
+          }
+        });
+      };
+
+      attachLandingListeners();
+      setTimeout(attachLandingListeners, 200);
+      setTimeout(attachLandingListeners, 600);
     }, 50);
 
     return () => clearTimeout(timer);

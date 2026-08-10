@@ -88,28 +88,28 @@ export function ExactLogin() {
 
       const attachFormListeners = () => {
         const forms = document.querySelectorAll("form");
-        forms.forEach((form) => {
-          if ((form as any)._hasLoginListener) return;
-          (form as any)._hasLoginListener = true;
-          form.addEventListener("submit", (e) => {
+        forms.forEach((oldForm) => {
+          if ((oldForm as any)._hasLoginListener) return;
+          
+          // Clone form to wipe out the mock event listeners attached by the injected SCRIPT
+          const newForm = oldForm.cloneNode(true) as HTMLFormElement;
+          oldForm.parentNode?.replaceChild(newForm, oldForm);
+          
+          (newForm as any)._hasLoginListener = true;
+          newForm.addEventListener("submit", (e) => {
             e.preventDefault();
             (window as any).handleLogin();
           });
-        });
 
-        const buttons = document.querySelectorAll("button, input[type='submit']");
-        buttons.forEach((btn) => {
-          if (btn.textContent?.toLowerCase().includes("sign in") || btn.textContent?.toLowerCase().includes("login")) {
-            if ((btn as any)._hasLoginListener) return;
-            (btn as any)._hasLoginListener = true;
-            btn.addEventListener("click", (e) => {
-              const form = btn.closest("form");
-              if (form) {
+          const buttons = newForm.querySelectorAll("button, input[type='submit']");
+          buttons.forEach((btn) => {
+            if (btn.textContent?.toLowerCase().includes("sign in") || btn.textContent?.toLowerCase().includes("login") || btn.id === "loginBtn") {
+              btn.addEventListener("click", (e) => {
                 e.preventDefault();
                 (window as any).handleLogin();
-              }
-            });
-          }
+              });
+            }
+          });
         });
       };
 

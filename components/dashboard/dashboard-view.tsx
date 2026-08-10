@@ -6,56 +6,49 @@ import { ProtectedShell } from "@/components/layout/protected-shell";
 import { StudentIdCardModal } from "@/components/students/student-id-card-modal";
 import { useAuth } from "@/context/auth-context";
 import { useStudents } from "@/services/student";
-import { useTeachers } from "@/services/teacher";
-import { useFees } from "@/services/fees";
-import { useNotifications } from "@/services/notification";
 import { useDashboard } from "@/services/dashboard";
+import { LoadingState, ErrorState } from "@/components/state/query-state";
 import { prettyDate } from "@/utils/format";
 import type { Student } from "@/types";
 
 export function DashboardView() {
   const { user } = useAuth();
+
+  // Single /dashboard call for all stats + notifications
+  const dashboardQuery = useDashboard();
+  const stats = dashboardQuery.data?.stats;
+  const notifications = dashboardQuery.data?.notifications ?? [];
+
+  // useStudents is only needed for the parent role child-switcher UI.
+  // For all other roles the counts come from the dashboard endpoint.
+  const isParent = user?.role === "parent";
   const studentsQuery = useStudents();
-  const teachersQuery = useTeachers();
-  const feesQuery = useFees();
-  const notificationsQuery = useNotifications();
-
   const students = studentsQuery.data ?? [];
-  const teachers = teachersQuery.data ?? [];
-  const fees = feesQuery.data ?? [];
-  const notifications = notificationsQuery.data ?? [];
 
-  // Parent linked children
-  const parentChildren = user?.role === "parent"
-    ? students.filter((s) => user.linkedStudentIds?.includes(s.id))
+  const parentChildren = isParent
+    ? students.filter((s) => user?.linkedStudentIds?.includes(s.id))
     : [];
 
   const [selectedChildId, setSelectedChildId] = useState<string>(
-    parentChildren[0]?.id || students[0]?.id || "S-1001"
+    parentChildren[0]?.id || ""
   );
   const [selectedStudentForCard, setSelectedStudentForCard] = useState<Student | null>(null);
 
-  const activeChild = students.find((s) => s.id === selectedChildId) || parentChildren[0] || students[0];
-
-  const totalStudentsCount = students.length;
-  const totalTeachersCount = teachers.length;
-  const avgAttendance = students.length
-    ? Math.round(students.reduce((acc, s) => acc + s.attendance, 0) / students.length)
-    : 0;
-  const paidFeesCount = fees.filter((f) => f.status === "Paid").length;
+  const activeChild =
+    students.find((s) => s.id === selectedChildId) || parentChildren[0] || undefined;
 
   return (
     <ProtectedShell title="Dashboard">
-      <div className={`space-y-6 ${user?.role === "parent" ? "portal role-parent p-4 rounded-3xl" : ""}`}>
+      <div className={`space-y-6 ${isParent ? "portal role-parent p-4 rounded-3xl" : ""}`}>
         {/* Legacy Greeting Banner */}
         <div className="greet">
           <h2>Welcome to Kindervale, {user?.name}!</h2>
-          <p>School Information System & Early Childhood Learning Portal.</p>
+          <p>School Information System &amp; Early Childhood Learning Portal.</p>
           <div className="bird">🐥</div>
         </div>
 
         {/* Parent Specific Child Hero Switcher */}
-        {user?.role === "parent" && parentChildren.length > 0 && (
+        {isParent && parentChildren.length > 0 && (
           <div className="child-hero">
             <div className="panel">
               <h3 className="font-bold text-[#2e5a75] mb-2">Select Child</h3>
@@ -105,7 +98,7 @@ export function DashboardView() {
                     onClick={() => setSelectedStudentForCard(activeChild)}
                     className="btn btn-primary btn-sm"
                   >
-                    🪪 View & Download Student ID Card PDF
+                    🪪 View &amp; Download Student ID Card PDF
                   </button>
                   <Link href="/calendar" className="btn btn-outline btn-sm">
                     📅 Annual Calendar
@@ -119,25 +112,31 @@ export function DashboardView() {
           </div>
         )}
 
-        {/* Stat Grid */}
-        <div className="stat-grid">
-          <div className="stat">
-            <div className="lbl">Total Students</div>
-            <div className="num">{totalStudentsCount}</div>
+        {/* Dashboard stats — sourced from /dashboard endpoint */}
+        {dashboardQuery.isLoading ? (
+          <LoadingState label="Loading dashboard..." />
+        ) : dashboardQuery.error ? (
+          <ErrorState error={dashboardQuery.error} />
+        ) : (
+          <div className="stat-grid">
+            <div className="stat">
+              <div className="lbl">Total Students</div>
+              <div className="num">{stats?.students ?? 0}</div>
+            </div>
+            <div className="stat">
+              <div className="lbl">Active Staff</div>
+              <div className="num">{stats?.teachers ?? 0}</div>
+            </div>
+            <div className="stat">
+              <div className="lbl">Avg Attendance</div>
+              <div className="num">{stats?.attendanceRate ?? 0}%</div>
+            </div>
+            <div className="stat">
+              <div className="lbl">Pending Fees (PKR)</div>
+              <div className="num">{stats?.pendingFees ?? 0}</div>
+            </div>
           </div>
-          <div className="stat">
-            <div className="lbl">Active Staff</div>
-            <div className="num">{totalTeachersCount}</div>
-          </div>
-          <div className="stat">
-            <div className="lbl">Avg Attendance</div>
-            <div className="num">{avgAttendance}%</div>
-          </div>
-          <div className="stat">
-            <div className="lbl">Paid Invoices</div>
-            <div className="num">{paidFeesCount} / {fees.length}</div>
-          </div>
-        </div>
+        )}
 
         {/* Notices & Quick Links Panels */}
         <div className="grid gap-6 lg:grid-cols-2">
@@ -167,7 +166,7 @@ export function DashboardView() {
                 📋 Attendance
               </Link>
               <Link href="/fees" className="btn btn-outline justify-center">
-                💳 Fees & Invoices
+                💳 Fees &amp; Invoices
               </Link>
               <Link href="/reports" className="btn btn-outline justify-center">
                 📊 Report Cards
@@ -188,3 +187,4 @@ export function DashboardView() {
     </ProtectedShell>
   );
 }
+

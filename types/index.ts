@@ -34,7 +34,8 @@ export interface Teacher {
   phone: string;
   subject: string;
   className: string;
-  attendance: "Present" | "Absent" | "Late" | "On Leave";
+  /** Matches backend teacherAttendanceEnum: PRESENT | LATE | ABSENT */
+  attendance: "Present" | "Late" | "Absent";
 }
 
 export interface Parent {
@@ -56,6 +57,7 @@ export interface Attendance {
   id: string;
   studentId: string;
   date: string;
+  /** Matches backend studentAttendanceStatusEnum: PRESENT | LATE | ABSENT | EXCUSED */
   status: "Present" | "Absent" | "Late" | "Excused";
 }
 
@@ -88,7 +90,8 @@ export interface Notification {
   title: string;
   body: string;
   date: string;
-  audience: Role | "all";
+  /** Matches backend notificationAudienceEnum: ALL | ADMIN | PRINCIPAL | TEACHER | PARENT | STUDENT */
+  audience: "ALL" | "ADMIN" | "PRINCIPAL" | "TEACHER" | "PARENT" | "STUDENT";
 }
 
 export interface Settings {
@@ -109,3 +112,4 @@ export interface ApiResponse<T> {
   message: string;
   success: boolean;
 }
+

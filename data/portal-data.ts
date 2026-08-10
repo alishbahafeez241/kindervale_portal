@@ -45,8 +45,8 @@ export const exams: Exam[] = [
 ];
 
 export const notifications: Notification[] = [
-  { id: "N-01", title: "Parent orientation", body: "Orientation is scheduled for Friday morning.", date: "2026-08-02", audience: "all" },
-  { id: "N-02", title: "Weekly objectives approved", body: "Nursery weekly objectives are visible to parents.", date: "2026-07-25", audience: "teacher" }
+  { id: "N-01", title: "Parent orientation", body: "Orientation is scheduled for Friday morning.", date: "2026-08-02", audience: "ALL" },
+  { id: "N-02", title: "Weekly objectives approved", body: "Nursery weekly objectives are visible to parents.", date: "2026-07-25", audience: "TEACHER" }
 ];
 
 export const settings: Settings = {

@@ -13,11 +13,15 @@ function attendanceLabel(status: string | undefined): Teacher["attendance"] {
   return "Present";
 }
 
+/**
+ * Maps a raw teacher row (joined with the users table on the backend)
+ * to the frontend Teacher shape. The backend now returns name + email
+ * via a LEFT JOIN with usersTable.
+ */
 export function mapTeacher(row: Record<string, unknown>): Teacher {
   return {
     id: String(row.id),
-    // TODO: Backend /teachers returns userId but not linked user name/email. Use user details here when that endpoint includes them.
-    name: String(row.name ?? row.userId ?? ""),
+    name: String(row.name ?? ""),
     email: String(row.email ?? ""),
     phone: String(row.phone ?? ""),
     subject: String(row.subject ?? ""),
@@ -36,3 +40,4 @@ export function useTeachers() {
 export const useCreateTeacher = () => useCreateResource<Teacher, TeacherPayload>(queryKeys.teachers, "/teachers");
 export const useUpdateTeacher = () => useUpdateResource<Teacher, TeacherPayload>(queryKeys.teachers, "/teachers");
 export const useDeleteTeacher = () => useDeleteResource(queryKeys.teachers, "/teachers");
+
