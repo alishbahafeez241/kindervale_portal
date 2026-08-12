@@ -1,0 +1,9 @@
+{
+  "name": "Kindervale Preschool Portal",
+  "short_name": "Kindervale",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbfcfd",
+  "theme_color": "#2e5a75",
+  "icons": []
+}
