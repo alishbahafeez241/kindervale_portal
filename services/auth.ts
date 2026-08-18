@@ -9,6 +9,7 @@ export interface LoginPayload {
 }
 
 interface LoginResponseData {
+  data?: LoginResponseData;
   id: string;
   name: string;
   email?: string;
@@ -24,23 +25,43 @@ interface LoginResponseData {
 }
 
 function normalizeRole(role?: Role): string {
-  if (role === "daycareadmin") return "daycare_admin";
+  if (role === "daycareadmin" || role === "daycare_admin") return "daycare_admin";
   return role || "admin";
 }
 
 function normalizeBackendRole(role: unknown): Role {
-  if (typeof role !== "string") return "parent";
-  if (role === "daycare_admin") return "daycareadmin";
-  return role as Role;
+  if (typeof role !== "string") {
+    throw new Error("Login response did not include a user role.");
+  }
+
+  const normalized = role.trim().toLowerCase().replace(/[\s_-]+/g, "");
+  if (normalized === "daycareadmin") return "daycareadmin";
+  if (normalized === "administrator" || normalized === "admin") return "admin";
+  if (normalized === "principal") return "principal";
+  if (normalized === "teacher") return "teacher";
+  if (normalized === "parent") return "parent";
+
+  throw new Error(`Login response included an unsupported role: ${role}`);
 }
 
-function buildUserFromResponse(data: Partial<LoginResponseData> | undefined, payload: LoginPayload): User {
-  if (!data) {
+function unwrapLoginResponse(data: Partial<LoginResponseData> | undefined): Partial<LoginResponseData> {
+  return data?.data && typeof data.data === "object" ? data.data : (data ?? {});
+}
+
+function buildUserFromResponse(responseData: Partial<LoginResponseData> | undefined, payload: LoginPayload): User {
+  const data = unwrapLoginResponse(responseData);
+  if (!Object.keys(data).length) {
     throw new Error("Login response did not include authentication data.");
   }
 
   const nestedUser = data.user as Partial<LoginResponseData> | undefined;
   const source = nestedUser ? nestedUser : data;
+  const accessToken = data.accessToken ?? source.accessToken;
+  const refreshToken = data.refreshToken ?? source.refreshToken;
+
+  if (!accessToken || !refreshToken) {
+    throw new Error("Login response did not include authentication tokens.");
+  }
 
   return {
     id: String(source.id ?? payload.username),
@@ -49,8 +70,8 @@ function buildUserFromResponse(data: Partial<LoginResponseData> | undefined, pay
     email: String(source.email ?? ""),
     role: normalizeBackendRole(source.role ?? payload.role),
     avatar: source.avatar,
-    accessToken: String(data.accessToken),
-    refreshToken: String(data.refreshToken),
+    accessToken: String(accessToken),
+    refreshToken: String(refreshToken),
     linkedStudentIds: source.linkedStudentIds,
     homeroom: source.homeroom,
     designation: source.designation
@@ -70,15 +91,11 @@ export async function login(payload: LoginPayload): Promise<User> {
     data: requestBody
   });
 
-  if (!responseData?.accessToken || !responseData?.refreshToken) {
-    throw new Error("Login response did not include authentication tokens.");
-  }
-
   const user = buildUserFromResponse(responseData, payload);
 
   if (typeof window !== "undefined") {
-    window.localStorage.setItem("kindervale-access-token", responseData.accessToken);
-    window.localStorage.setItem("kindervale-refresh-token", responseData.refreshToken);
+    window.localStorage.setItem("kindervale-access-token", user.accessToken ?? "");
+    window.localStorage.setItem("kindervale-refresh-token", user.refreshToken ?? "");
   }
 
   return user;

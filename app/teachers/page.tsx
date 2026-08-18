@@ -24,6 +24,7 @@ export default function TeachersPage() {
   function openEdit(teacher: Teacher) {
     setEditTarget(teacher);
     setForm({
+      name: teacher.name,
       phone: teacher.phone,
       subject: teacher.subject,
       className: teacher.className,
@@ -117,6 +118,10 @@ export default function TeachersPage() {
           <Modal isOpen={Boolean(editTarget)} onClose={() => setEditTarget(null)} title={`Edit — ${editTarget?.name ?? ""}`}>
             <form onSubmit={handleUpdate} className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block sm:col-span-2">
+                  <span className="mb-1 block text-xs font-bold text-slate-600">Name</span>
+                  <input className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#2e5a75]" value={form.name ?? ""} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-bold text-slate-600">Subject</span>
                   <input className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#2e5a75]" value={form.subject ?? ""} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} />

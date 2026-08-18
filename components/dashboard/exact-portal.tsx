@@ -38,6 +38,29 @@ export function ExactPortal({ defaultView = "dashboard" }: { defaultView?: strin
     return Array.isArray(items) ? items : [];
   };
 
+  const TEACHER_ATTENDANCE_OVERRIDE_KEY = "kindervale-teacher-attendance-overrides";
+
+  const readTeacherAttendanceOverrides = () => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = localStorage.getItem(TEACHER_ATTENDANCE_OVERRIDE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw) as Record<string, string>;
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const writeTeacherAttendanceOverrides = (overrides: Record<string, string>) => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(TEACHER_ATTENDANCE_OVERRIDE_KEY, JSON.stringify(overrides));
+    } catch {
+      // keep the UI working if storage is unavailable
+    }
+  };
+
   const mapStudentsForPortal = (studentRows: any[]) => studentRows.map((student: any) => ({
     id: student.id,
     userId: student.userId,
@@ -49,17 +72,25 @@ export function ExactPortal({ defaultView = "dashboard" }: { defaultView?: strin
     score: 0
   }));
 
-  const mapStaffForPortal = (teacherRows: any[]) => teacherRows.map((teacher: any) => ({
-    id: teacher.id,
-    userId: teacher.userId,
-    name: teacher.name ?? "",
-    email: teacher.email ?? "",
-    dept: teacher.className ?? "",
-    role: teacher.subject ?? "Teacher",
-    attendance: teacher.attendance ?? "PRESENT",
-    status: teacher.attendance === "ABSENT" ? "On Leave" : "Active",
-    portal: "Kindervale"
-  }));
+  const mapStaffForPortal = (teacherRows: any[]) => {
+    const overrides = readTeacherAttendanceOverrides();
+    return teacherRows.map((teacher: any) => {
+      const baseAttendance = teacher.attendance ?? "PRESENT";
+      const override = overrides[String(teacher.id)];
+      const attendance = override || baseAttendance;
+      return {
+        id: teacher.id,
+        userId: teacher.userId,
+        name: teacher.name ?? "",
+        email: teacher.email ?? "",
+        dept: teacher.className ?? "",
+        role: teacher.subject ?? "Teacher",
+        attendance,
+        status: attendance === "ABSENT" ? "On Leave" : "Active",
+        portal: "Kindervale"
+      };
+    });
+  };
 
   const normalizeTimetableDay = (day: any) => {
     const value = String(day || "Mon").trim().toLowerCase();
@@ -926,6 +957,32 @@ export function ExactPortal({ defaultView = "dashboard" }: { defaultView?: strin
         }
       };
       win.reviewStudentLeave = win.__reviewStudentLeaveApi;
+      if (!win.__leaveReviewDelegated) {
+        document.addEventListener("click", (event) => {
+          const target = event.target as HTMLElement | null;
+          const teacherButton = target && target.closest("[data-review-leave-id]") as HTMLElement | null;
+          if (teacherButton && typeof win.reviewLeave === "function") {
+            const id = teacherButton.getAttribute("data-review-leave-id");
+            const decision = teacherButton.getAttribute("data-review-leave-decision") || "Approved";
+            if (id) {
+              event.preventDefault();
+              event.stopPropagation();
+              void win.reviewLeave(id, decision);
+            }
+          }
+          const studentButton = target && target.closest("[data-review-student-leave-id]") as HTMLElement | null;
+          if (studentButton && typeof win.reviewStudentLeave === "function") {
+            const id = studentButton.getAttribute("data-review-student-leave-id");
+            const decision = studentButton.getAttribute("data-review-student-leave-decision") || "Approved";
+            if (id) {
+              event.preventDefault();
+              event.stopPropagation();
+              void win.reviewStudentLeave(id, decision);
+            }
+          }
+        });
+        win.__leaveReviewDelegated = true;
+      }
       if (!win.__feesNavigateWrapped && typeof win.navigate === "function") {
         const originalNavigate = win.navigate.bind(win);
         win.navigate = (key: string) => {
@@ -1445,12 +1502,17 @@ export function ExactPortal({ defaultView = "dashboard" }: { defaultView?: strin
         const today = new Date().toISOString().slice(0, 10);
         const teachers = (win.staff || []).filter((staffMember: any) => staffMember.role === "Teacher" || staffMember.role);
         try {
+          const attendanceUpdates: Record<string, string> = {};
           await Promise.all(teachers.map((teacher: any) => {
             const select = document.getElementById(`sa_${teacher.id}`) as HTMLSelectElement | null;
             if (!select) return Promise.resolve();
             const attendance = select.value === "Absent" ? "ABSENT" : select.value === "Late" ? "LATE" : "PRESENT";
+            attendanceUpdates[String(teacher.id)] = attendance;
             return apiRequest(`/teachers/${teacher.id}`, { method: "PATCH", data: { attendance } });
           }));
+          const overrides = readTeacherAttendanceOverrides();
+          const nextOverrides = { ...overrides, ...attendanceUpdates };
+          writeTeacherAttendanceOverrides(nextOverrides);
           await syncStaff();
           if (typeof win.toast === "function") win.toast("Staff attendance saved");
           if (typeof win.navigate === "function") win.navigate("teacherattendance");

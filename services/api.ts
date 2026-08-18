@@ -184,12 +184,20 @@ function getErrorMessage(error: unknown): string {
 export async function apiRequest<T>(path: string, config: ApiRequestConfig = {}) {
   const { query, headers, ...axiosConfig } = config;
   const url = createUrl(path);
+  const data = axiosConfig.data ?? (axiosConfig as any).body;
+  const isFormData = typeof FormData !== "undefined" && data instanceof FormData;
+
+  const requestHeaders = { ...(headers ?? {}) } as Record<string, unknown>;
+  if (isFormData) {
+    delete requestHeaders["Content-Type"];
+    requestHeaders["Content-Type"] = undefined;
+  }
 
   const normalizedConfig = {
     ...axiosConfig,
     params: query,
-    headers,
-    data: axiosConfig.data ?? (axiosConfig as any).body
+    headers: Object.keys(requestHeaders).length ? requestHeaders : undefined,
+    data
   } as AxiosRequestConfig;
 
   if ((axiosConfig as any).body !== undefined) {
