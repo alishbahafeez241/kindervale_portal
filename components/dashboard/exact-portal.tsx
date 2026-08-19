@@ -268,6 +268,18 @@ export function ExactPortal({ defaultView = "dashboard" }: { defaultView?: strin
     };
   };
 
+  const mapAttendanceRecordsForPortal = (attendanceRows: any[]) => {
+    return attendanceRows.reduce((records: Record<string, Record<string, string>>, row: any) => {
+      const studentId = String(row.studentId ?? "");
+      const date = String(row.date ?? "").slice(0, 10);
+      if (!studentId || !date) return records;
+
+      records[studentId] = records[studentId] ?? {};
+      records[studentId][date] = row.status === "EXCUSED" ? "On Leave" : String(row.status ?? "PRESENT");
+      return records;
+    }, {});
+  };
+
   const mapDashboardNoticesForPortal = (eventRows: any[], _notificationRows: any[]) => {
     const eventNotices = eventRows
       .map((event: any) => ({ event, dateKey: normalizeCalendarDate(event?.date) }))
@@ -365,6 +377,7 @@ export function ExactPortal({ defaultView = "dashboard" }: { defaultView?: strin
     const portalCalendarEvents = mapCalendarEventsForPortal(calendarEventRows);
     const portalExpenses = mapExpensesForPortal(expenseRows);
     const portalTimetables = mapTimetablesForPortal(timetableRows);
+    const portalAttendanceRecords = mapAttendanceRecordsForPortal(attendanceRows);
     const sessionPasswords = (() => {
       try {
         return JSON.parse(sessionStorage.getItem("kindervale-generated-passwords") || "{}");
@@ -432,10 +445,11 @@ export function ExactPortal({ defaultView = "dashboard" }: { defaultView?: strin
       studentLeaveRequests: portalStudentLeaveRequests,
       notifications: portalNotifications,
       dashboardStats: portalDashboardStats,
-      noticesList: portalDashboardNotices
+      noticesList: portalDashboardNotices,
+      attendanceRecords: portalAttendanceRecords
     });
 
-    win.attendanceRecords = attendanceRows;
+    win.attendanceRecords = portalAttendanceRecords;
     win.homeworkRows = portalHomework;
     win.examRows = normalizeList(exams);
     win.reportCardRows = normalizeList(reports);
@@ -448,9 +462,7 @@ export function ExactPortal({ defaultView = "dashboard" }: { defaultView?: strin
       return comments;
     }, {});
 
-    if (typeof win.render === "function" && typeof win.currentModule !== "undefined") {
-      win.render(win.currentModule);
-    }
+    renderCurrentModule();
   };
 
   const syncFees = async () => {
@@ -519,6 +531,59 @@ export function ExactPortal({ defaultView = "dashboard" }: { defaultView?: strin
 
     if (typeof win.render === "function" && typeof win.currentModule !== "undefined") {
       win.render(win.currentModule);
+    }
+  };
+
+  const applySavedAttendanceDropdowns = () => {
+    if (typeof window === "undefined") return;
+    const win = window as any;
+    if (win.currentModule !== "attendance") return;
+
+    const selects = Array.from(document.querySelectorAll("select[data-att]")) as HTMLSelectElement[];
+    if (!selects.length) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    let studentRows = Array.isArray(win.students) ? win.students : [];
+    try {
+      const currentRole = win.eval?.("current && current.role") ?? win.current?.role;
+      const currentName = win.eval?.("current && current.name") ?? win.current?.name;
+      const className = currentRole === "teacher" && typeof win.teacherClass === "function" ? win.teacherClass(currentName) : null;
+      if (className) studentRows = studentRows.filter((student: any) => student.cls === className);
+    } catch {
+      // The legacy script owns current/teacherClass; keep the unfiltered row order if it is unavailable.
+    }
+
+    let selectIndex = 0;
+    for (const student of studentRows) {
+      const status = win.attendanceRecords?.[student.id]?.[today];
+      if (status === "On Leave") continue;
+      const select = selects[selectIndex++];
+      if (!select) break;
+      if (status === "ABSENT") select.value = "Absent";
+      else if (status === "LATE") select.value = "Late";
+      else if (status === "PRESENT") select.value = "Present";
+    }
+  };
+
+  const normalizeLeaveReviewButtons = () => {
+    if (typeof document === "undefined") return;
+    const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>("button[onclick*='reviewLeave(']"));
+    buttons.forEach((button) => {
+      const handler = button.getAttribute("onclick") || "";
+      const match = handler.match(/^reviewLeave\(([^,'")]+),(['"])(Approved|Rejected)\2\)$/);
+      if (!match) return;
+      button.setAttribute("onclick", `reviewLeave(${JSON.stringify(match[1])},'${match[3]}')`);
+    });
+  };
+
+  const renderCurrentModule = () => {
+    if (typeof window === "undefined") return;
+    const win = window as any;
+    if (typeof win.render === "function" && typeof win.currentModule !== "undefined") {
+      win.render(win.currentModule);
+      normalizeLeaveReviewButtons();
+      window.setTimeout(normalizeLeaveReviewButtons, 0);
+      window.setTimeout(applySavedAttendanceDropdowns, 0);
     }
   };
 
@@ -631,9 +696,7 @@ export function ExactPortal({ defaultView = "dashboard" }: { defaultView?: strin
     if (typeof window === "undefined") return;
     const win = window as any;
     assignScriptData({ students, staff, feeRows: feeRowsState, leaveRequests: leaveRequestsState, studentLeaveRequests: studentLeaveRequestsState, notifications: notificationsState, lessonPlans, expenseRows: expenses, CAL_EVENTS: mapCalendarEventsForPortal(calendarEvents), WEEK_TT: timetables, createdAccounts: generatedAccounts, dashboardStats: dashboardStatsState, noticesList: dashboardNoticesState });
-    if (mounted && typeof win.render === "function" && typeof win.currentModule !== "undefined") {
-      win.render(win.currentModule);
-    }
+    if (mounted) renderCurrentModule();
   }, [students, staff, feeRowsState, leaveRequestsState, studentLeaveRequestsState, notificationsState, lessonPlans, expenses, calendarEvents, timetables, generatedAccounts, dashboardStatsState, dashboardNoticesState, mounted]);
 
   useEffect(() => {
@@ -717,6 +780,7 @@ export function ExactPortal({ defaultView = "dashboard" }: { defaultView?: strin
       // so a browser refresh renders the backend-backed state immediately.
       if (typeof win.openPortal === "function") {
         win.openPortal(activeModule);
+        window.setTimeout(applySavedAttendanceDropdowns, 0);
       }
 
 
@@ -983,10 +1047,27 @@ export function ExactPortal({ defaultView = "dashboard" }: { defaultView?: strin
         });
         win.__leaveReviewDelegated = true;
       }
+      if (!win.__leaveReviewCapture) {
+        document.addEventListener("click", (event) => {
+          const target = event.target as HTMLElement | null;
+          const button = target && target.closest("button[onclick*='reviewLeave(']") as HTMLButtonElement | null;
+          if (!button || typeof win.reviewLeave !== "function") return;
+          const handler = button.getAttribute("onclick") || "";
+          const match = handler.match(/^reviewLeave\(([^,'")]+),['"](Approved|Rejected)['"]\)$/);
+          if (!match) return;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          void win.reviewLeave(match[1], match[2]);
+        }, true);
+        win.__leaveReviewCapture = true;
+      }
       if (!win.__feesNavigateWrapped && typeof win.navigate === "function") {
         const originalNavigate = win.navigate.bind(win);
         win.navigate = (key: string) => {
           const result = originalNavigate(key);
+          normalizeLeaveReviewButtons();
+          window.setTimeout(normalizeLeaveReviewButtons, 0);
+          window.setTimeout(applySavedAttendanceDropdowns, 0);
           if (key === "fees") {
             void syncFees().catch((error: any) => {
               if (typeof win.toast === "function") win.toast(error?.message || "Failed to load fees");
@@ -1001,6 +1082,10 @@ export function ExactPortal({ defaultView = "dashboard" }: { defaultView?: strin
               void syncCalendarEvents().catch((noticeError: any) => {
                 if (typeof win.toast === "function") win.toast(noticeError?.message || "Failed to load notices");
               });
+            });
+          } else if (key === "attendance") {
+            void syncPortalData().catch((error: any) => {
+              if (typeof win.toast === "function") win.toast(error?.message || "Failed to load attendance");
             });
           } else if (key === "teachertimetable") {
             void syncTimetables().catch((error: any) => {
