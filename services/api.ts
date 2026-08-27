@@ -36,7 +36,7 @@ const STORAGE_ACCESS_TOKEN = "kindervale-access-token";
 const STORAGE_REFRESH_TOKEN = "kindervale-refresh-token";
 const STORAGE_USER = "kindervale-user";
 
-export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
+export const API_BASE_URL = "https://kindervale-backend.onrender.com/api";
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
