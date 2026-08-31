@@ -7,23 +7,23 @@ import { useDocuments } from "@/services/documents";
 import type { SchoolDocument } from "@/services/documents";
 
 export default function DocumentsPage() {
-  const { data: docs, isLoading, isError } = useDocuments();
+  const { data: docs, isLoading, isError, error } = useDocuments();
 
   return (
     <ProtectedShell title="Documents">
       {isLoading && <LoadingState />}
-      {isError && <ErrorState />}
+      {isError && <ErrorState error={error} />}
       {!isLoading && !isError && (!docs || docs.length === 0) && (
-        <EmptyState message="No documents uploaded." />
+        <EmptyState label="No documents uploaded." />
       )}
       {docs && docs.length > 0 && (
         <DataTable<SchoolDocument>
           data={docs}
           columns={[
-            { key: "title", header: "Title" },
-            { key: "type", header: "Type" },
-            { key: "uploadedBy", header: "Uploaded By" },
-            { key: "createdAt", header: "Date" },
+            { key: "title", label: "Title" },
+            { key: "type", label: "Type" },
+            { key: "uploadedBy", label: "Uploaded By" },
+            { key: "createdAt", label: "Date" },
           ]}
         />
       )}

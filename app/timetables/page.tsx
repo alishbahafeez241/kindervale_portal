@@ -7,24 +7,24 @@ import { useTimetables } from "@/services/timetables";
 import type { Timetable } from "@/services/timetables";
 
 export default function TimetablesPage() {
-  const { data: timetables, isLoading, isError } = useTimetables();
+  const { data: timetables, isLoading, isError, error } = useTimetables();
 
   return (
     <ProtectedShell title="Timetables">
       {isLoading && <LoadingState />}
-      {isError && <ErrorState />}
+      {isError && <ErrorState error={error} />}
       {!isLoading && !isError && (!timetables || timetables.length === 0) && (
-        <EmptyState message="No timetable entries found." />
+        <EmptyState label="No timetable entries found." />
       )}
       {timetables && timetables.length > 0 && (
         <DataTable<Timetable>
           data={timetables}
           columns={[
-            { key: "day", header: "Day" },
-            { key: "period", header: "Period" },
-            { key: "subject", header: "Subject" },
-            { key: "teacher", header: "Teacher" },
-            { key: "className", header: "Class" },
+            { key: "day", label: "Day" },
+            { key: "period", label: "Period" },
+            { key: "subject", label: "Subject" },
+            { key: "teacher", label: "Teacher" },
+            { key: "className", label: "Class" },
           ]}
         />
       )}

@@ -7,22 +7,22 @@ import { useClasses } from "@/services/classes";
 import type { ClassRoom } from "@/services/classes";
 
 export default function ClassroomsPage() {
-  const { data: classes, isLoading, isError } = useClasses();
+  const { data: classes, isLoading, isError, error } = useClasses();
 
   return (
     <ProtectedShell title="Classrooms">
       {isLoading && <LoadingState />}
-      {isError && <ErrorState />}
+      {isError && <ErrorState error={error} />}
       {!isLoading && !isError && (!classes || classes.length === 0) && (
-        <EmptyState message="No classrooms found." />
+        <EmptyState label="No classrooms found." />
       )}
       {classes && classes.length > 0 && (
         <DataTable<ClassRoom>
           data={classes}
           columns={[
-            { key: "name", header: "Class Name" },
-            { key: "teacher", header: "Teacher" },
-            { key: "capacity", header: "Capacity" },
+            { key: "name", label: "Class Name" },
+            { key: "teacher", label: "Teacher" },
+            { key: "capacity", label: "Capacity" },
           ]}
         />
       )}

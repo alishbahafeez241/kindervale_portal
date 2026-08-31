@@ -7,14 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { useNotifications } from "@/services/notification";
 
 export default function NotificationsPage() {
-  const { data: notifications, isLoading, isError } = useNotifications();
+  const { data: notifications, isLoading, isError, error } = useNotifications();
 
   return (
     <ProtectedShell title="Notifications">
       {isLoading && <LoadingState />}
-      {isError && <ErrorState />}
+      {isError && <ErrorState error={error} />}
       {!isLoading && !isError && (!notifications || notifications.length === 0) && (
-        <EmptyState message="No notifications." />
+        <EmptyState label="No notifications." />
       )}
       {notifications && notifications.length > 0 && (
         <div className="space-y-3">

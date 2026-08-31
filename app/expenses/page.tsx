@@ -8,24 +8,24 @@ import type { Expense } from "@/services/expenses";
 import { money, prettyDate } from "@/utils/format";
 
 export default function ExpensesPage() {
-  const { data: expenses, isLoading, isError } = useExpenses();
+  const { data: expenses, isLoading, isError, error } = useExpenses();
 
   return (
     <ProtectedShell title="Expenses">
       {isLoading && <LoadingState />}
-      {isError && <ErrorState />}
+      {isError && <ErrorState error={error} />}
       {!isLoading && !isError && (!expenses || expenses.length === 0) && (
-        <EmptyState message="No expenses recorded." />
+        <EmptyState label="No expenses recorded." />
       )}
       {expenses && expenses.length > 0 && (
         <DataTable<Expense>
           data={expenses}
           columns={[
-            { key: "title", header: "Title" },
-            { key: "category", header: "Category" },
-            { key: "amount", header: "Amount", render: (row) => money(row.amount) },
-            { key: "date", header: "Date", render: (row) => prettyDate(row.date) },
-            { key: "paidBy", header: "Paid By" },
+            { key: "title", label: "Title" },
+            { key: "category", label: "Category" },
+            { key: "amount", label: "Amount", render: (row) => money(row.amount) },
+            { key: "date", label: "Date", render: (row) => prettyDate(row.date) },
+            { key: "paidBy", label: "Paid By" },
           ]}
         />
       )}

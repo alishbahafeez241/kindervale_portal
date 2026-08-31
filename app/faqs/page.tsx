@@ -6,14 +6,14 @@ import { Card } from "@/components/ui/card";
 import { useFAQs } from "@/services/faqs";
 
 export default function FAQsPage() {
-  const { data: faqs, isLoading, isError } = useFAQs();
+  const { data: faqs, isLoading, isError, error } = useFAQs();
 
   return (
     <ProtectedShell title="FAQs">
       {isLoading && <LoadingState />}
-      {isError && <ErrorState />}
+      {isError && <ErrorState error={error} />}
       {!isLoading && !isError && (!faqs || faqs.length === 0) && (
-        <EmptyState message="No FAQs added yet." />
+        <EmptyState label="No FAQs added yet." />
       )}
       {faqs && faqs.length > 0 && (
         <div className="space-y-4">

@@ -7,21 +7,21 @@ import { useSubjects } from "@/services/subjects";
 import type { Subject } from "@/services/subjects";
 
 export default function SubjectsPage() {
-  const { data: subjects, isLoading, isError } = useSubjects();
+  const { data: subjects, isLoading, isError, error } = useSubjects();
 
   return (
     <ProtectedShell title="Subjects">
       {isLoading && <LoadingState />}
-      {isError && <ErrorState />}
+      {isError && <ErrorState error={error} />}
       {!isLoading && !isError && (!subjects || subjects.length === 0) && (
-        <EmptyState message="No subjects found." />
+        <EmptyState label="No subjects found." />
       )}
       {subjects && subjects.length > 0 && (
         <DataTable<Subject>
           data={subjects}
           columns={[
-            { key: "name", header: "Subject Name" },
-            { key: "teacherName", header: "Assigned Teacher" },
+            { key: "name", label: "Subject Name" },
+            { key: "teacherName", label: "Assigned Teacher" },
           ]}
         />
       )}

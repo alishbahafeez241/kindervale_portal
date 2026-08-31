@@ -14,14 +14,14 @@ const statusColor: Record<string, string> = {
 };
 
 export default function LessonPlansPage() {
-  const { data: plans, isLoading, isError } = useLessonPlans();
+  const { data: plans, isLoading, isError, error } = useLessonPlans();
 
   return (
     <ProtectedShell title="Lesson Plans">
       {isLoading && <LoadingState />}
-      {isError && <ErrorState />}
+      {isError && <ErrorState error={error} />}
       {!isLoading && !isError && (!plans || plans.length === 0) && (
-        <EmptyState message="No lesson plans found." />
+        <EmptyState label="No lesson plans found." />
       )}
       {plans && plans.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

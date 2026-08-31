@@ -14,14 +14,14 @@ const statusColor: Record<string, string> = {
 };
 
 export default function LeaveRequestsPage() {
-  const { data: requests, isLoading, isError } = useLeaveRequests();
+  const { data: requests, isLoading, isError, error } = useLeaveRequests();
 
   return (
     <ProtectedShell title="Leave Requests">
       {isLoading && <LoadingState />}
-      {isError && <ErrorState />}
+      {isError && <ErrorState error={error} />}
       {!isLoading && !isError && (!requests || requests.length === 0) && (
-        <EmptyState message="No leave requests found." />
+        <EmptyState label="No leave requests found." />
       )}
       {requests && requests.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
