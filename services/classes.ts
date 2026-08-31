@@ -2,9 +2,9 @@
 import { queryKeys } from "@/services/query-keys";
 import { useResourceList, useCreateResource, useUpdateResource, useDeleteResource } from "@/services/resource-hooks";
 
-const CLASS_PATH = "/classroom/classes";
+const CLASS_PATH = "/classes";
 const CLASS_KEY = queryKeys.classes;
-const SECTION_PATH = "/classroom/sections";
+const SECTION_PATH = "/sections";
 const SECTION_KEY = queryKeys.sections;
 
 export interface ClassRoom { id: string; name: string; teacher?: string; capacity?: number; }

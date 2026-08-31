@@ -2,7 +2,7 @@
 import { queryKeys } from "@/services/query-keys";
 import { useResourceList, useCreateResource, useUpdateResource, useDeleteResource } from "@/services/resource-hooks";
 
-const PATH = "/school/timetables";
+const PATH = "/timetables";
 const KEY = queryKeys.timetables;
 
 export interface Timetable { id: string; className: string; day: string; period: string; subject: string; teacher: string; startTime?: string; endTime?: string; }

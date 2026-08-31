@@ -2,7 +2,7 @@
 import { queryKeys } from "@/services/query-keys";
 import { useResourceList, useCreateResource, useUpdateResource, useDeleteResource } from "@/services/resource-hooks";
 
-const PATH = "/school/expenses";
+const PATH = "/expenses";
 const KEY = queryKeys.expenses;
 
 export interface Expense { id: string; title: string; category: string; amount: number; date: string; description?: string; paidBy?: string; }

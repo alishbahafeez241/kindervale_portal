@@ -2,7 +2,7 @@
 import { queryKeys } from "@/services/query-keys";
 import { useResourceList, useCreateResource, useUpdateResource, useDeleteResource } from "@/services/resource-hooks";
 
-const PATH = "/school/faqs";
+const PATH = "/faqs";
 const KEY = queryKeys.faqs;
 
 export interface FAQ { id: string; question: string; answer: string; category?: string; }

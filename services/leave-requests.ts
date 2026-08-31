@@ -2,7 +2,7 @@
 import { queryKeys } from "@/services/query-keys";
 import { useResourceList, useCreateResource, useUpdateResource, useDeleteResource } from "@/services/resource-hooks";
 
-const PATH = "/school/leave-requests";
+const PATH = "/leave-requests";
 const KEY = queryKeys.leaveRequests;
 
 export interface LeaveRequest { id: string; userId: string; userName?: string; type: string; startDate: string; endDate: string; reason: string; status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED"; reviewedBy?: string; }
