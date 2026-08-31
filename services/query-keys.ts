@@ -10,5 +10,14 @@ export const queryKeys = {
   calendarEvents: ["calendar-events"] as const,
   reportCards: ["report-cards"] as const,
   notifications: ["notifications"] as const,
-  settings: ["settings"] as const
+  settings: ["settings"] as const,
+  lessonPlans: ["lesson-plans"] as const,
+  classes: ["classes"] as const,
+  sections: ["sections"] as const,
+  subjects: ["subjects"] as const,
+  timetables: ["timetables"] as const,
+  leaveRequests: ["leave-requests"] as const,
+  expenses: ["expenses"] as const,
+  documents: ["documents"] as const,
+  faqs: ["faqs"] as const,
 };
