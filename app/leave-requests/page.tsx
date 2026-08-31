@@ -6,11 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useLeaveRequests } from "@/services/leave-requests";
 
-const statusColor: Record<string, string> = {
-  PENDING: "bg-yellow-100 text-yellow-700",
-  APPROVED: "bg-green-100 text-green-700",
-  REJECTED: "bg-red-100 text-red-700",
-  CANCELLED: "bg-gray-100 text-gray-700",
+const statusTone: Record<string, "ok" | "warn" | "bad" | "neutral"> = {
+  PENDING: "warn",
+  APPROVED: "ok",
+  REJECTED: "bad",
+  CANCELLED: "neutral",
 };
 
 export default function LeaveRequestsPage() {
@@ -29,7 +29,7 @@ export default function LeaveRequestsPage() {
             <Card key={req.id} className="p-4">
               <div className="flex items-start justify-between">
                 <h3 className="font-bold text-brand-navy">{req.userName ?? "Staff"}</h3>
-                <Badge className={statusColor[req.status] ?? ""}>{req.status}</Badge>
+                <Badge tone={statusTone[req.status] ?? "neutral"}>{req.status}</Badge>
               </div>
               <p className="mt-1 text-sm text-slate-500">{req.type}</p>
               <p className="text-xs text-slate-400">{req.startDate} → {req.endDate}</p>
