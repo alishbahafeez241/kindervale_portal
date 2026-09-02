@@ -1508,59 +1508,36 @@ export function ExactPortal({ defaultView = "dashboard" }: { defaultView?: strin
         linkedUserId?: string;
         className?: string;
         subject?: string;
+        studentIds?: string[];
       }) => {
-        const isParentAccount = options.role === "Parent";
         const apiName = toApiName(options.name);
         if (!apiName) throw new Error("That name has no letters in it — enter a full name");
 
-        const username = options.username || (typeof win.genUsername === "function"
-          ? win.genUsername(apiName)
-          : apiName.toLowerCase().split(/\s+/).filter(Boolean).join("."));
-        const password = typeof win.genPassword === "function"
-          ? win.genPassword(apiName)
-          : `${apiName.split(/\s+/)[0] || "User"}@2026`;
-        const safeEmail = options.email || `${username}@kindervale.local`;
-        const userRole = isParentAccount ? "PARENT" : "TEACHER";
-
-        let linkedUserId = options.linkedUserId;
-        if (!linkedUserId) {
-          const existingUsers = extractItems(await fetchOptional("/users", { query: { page: 1, limit: 100, search: safeEmail } }));
-          linkedUserId = existingUsers.find((row: any) => row.email === safeEmail)?.id;
+        // Build payload for the atomic generate-login endpoint.
+        // The backend creates the user, the teacher/parent record, AND links
+        // parent→child all in one call, returning the real plaintext password.
+        const payload: Record<string, any> = {
+          name: apiName,
+          role: options.role === "Parent" ? "Parent" : "Teacher",
+        };
+        if (options.email) payload.email = options.email;
+        if (options.className) payload.className = options.className;
+        if (options.subject) payload.subject = options.subject;
+        if (options.linkedId) payload.linkedRecordId = options.linkedId;
+        if (options.studentIds && options.studentIds.length > 0) {
+          payload.studentIds = options.studentIds;
         }
 
-        let response: any;
-        if (linkedUserId) {
-          try {
-            response = await apiRequest<any>(`/users/${linkedUserId}`, {
-              method: "PATCH",
-              data: { name: apiName, username, email: safeEmail, password, role: userRole, status: "ACTIVE" }
-            });
-          } catch (error) {
-            if (!errorMessage(error, "").toLowerCase().includes("not found")) throw error;
-            linkedUserId = undefined;
-          }
-        }
-        if (!linkedUserId) {
-          response = await apiRequest<any>("/users", {
-            method: "POST",
-            data: { name: apiName, username, email: safeEmail, password, role: userRole }
-          });
-        }
+        const response = await apiRequest<any>("/users/generate-login", {
+          method: "POST",
+          data: payload,
+        });
 
-        const user = response?.data ?? response;
-        const userId = user?.id ?? linkedUserId;
-        if (!userId) throw new Error("The login could not be created");
-
-        // A login is only usable once it is attached to a profile. Without a teachers row the
-        // account has no class, never appears in the staff list, and its leave requests stay
-        // invisible to Admin — which is how "generated credentials don't work" showed up.
-        if (isParentAccount) {
-          if (options.linkedId) await apiRequest(`/parents/${options.linkedId}`, { method: "PATCH", data: { userId } });
-          else await fetchOptional("/parents", { method: "POST", data: { userId, name: apiName, email: safeEmail } });
-        } else {
-          if (options.linkedId) await apiRequest(`/teachers/${options.linkedId}`, { method: "PATCH", data: { userId } });
-          else await fetchOptional("/teachers", { method: "POST", data: { userId, subject: options.subject || "General", className: options.className || "Unassigned" } });
-        }
+        const result = response?.data ?? response;
+        const userId = result?.user?.id;
+        const username = result?.username;
+        const password = result?.password;
+        if (!userId || !username || !password) throw new Error("The login could not be created");
 
         await syncGeneratedAccounts({ [userId]: password });
         return { userId, username, password, name: apiName };
@@ -1606,7 +1583,17 @@ export function ExactPortal({ defaultView = "dashboard" }: { defaultView?: strin
               if (typeof win.toast === "function") win.toast("That selection is no longer valid — pick again");
               return;
             }
-            created = await generateLoginFor({ role, name: parent.name, email: parent.email, username: existingUsernameFor(parent.id), linkedId: parent.id, linkedUserId: parent.userId });
+            // Collect student IDs to link this parent to their children.
+            // The parent record from the demo data carries a childId; for real data
+            // we look at all students that reference this parent.
+            const childIds: string[] = [];
+            if (parent.childId) childIds.push(parent.childId);
+            // Also gather any students whose parentId already matches
+            const allStudents: any[] = win.students || [];
+            for (const s of allStudents) {
+              if (s.parentId === parent.id && !childIds.includes(s.id)) childIds.push(s.id);
+            }
+            created = await generateLoginFor({ role, name: parent.name, email: parent.email, linkedId: parent.id, studentIds: childIds });
           } else {
             const teacher = (win.staff || []).find((row: any) => row.id === personId && row.portal === scope);
             if (!teacher?.name) {
